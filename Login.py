@@ -7,11 +7,21 @@ Created on Tue May 17 22:39:00 2022
 """
 
 import streamlit as st
+import asyncio
+import time
 
-async def login():
+def login():
     st.title("Loging Window")
-    user_input = st.text_input("Enter Your profile")
-    if user_input == "Shashank":
+    user_input = st.text_input("Enter Your UserName")
+    password = st.text_input("Enter your password")
+    #
+    time.sleep(3)
+    with st.spinner("Loading..."):
+        time.sleep(2)
+    st.success("Authenticated")
+    if user_input == "Shashank" and password == "123":
         return True
     else:
+        st.title("Auth Failed")
         return False
+    

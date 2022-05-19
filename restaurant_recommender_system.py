@@ -12,12 +12,19 @@
 
 # In[1]:
 
+import streamlit as st
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
 from warnings import filterwarnings
 filterwarnings('ignore')
+
+import plotly.express as px
+from plotly.graph_objs import *
+import plotly.graph_objects as go
+import plotly as py
+import plotly.io as pio
 
 
 # In[2]:
@@ -83,9 +90,11 @@ data_reviews = data_reviews.rename(columns={'Restaurant': 'Name'})
 df = pd.merge(data_reviews, data_names, how='left', on='Name')
 
 # Dropping the columns which I am not going to use:
-df.drop(['Reviewer', 'Time', 'Pictures', 'Links', 'Collections'], axis=1, inplace=True)
+from PIL import Image
+img = df['Links'][0]
+print(df['Links'][0])
+df.drop(['Reviewer', 'Time', 'Pictures', 'Collections'], axis=1, inplace=True)
 df.head()
-
 
 # ## Preparing Cost and Rating Columns
 
@@ -197,7 +206,9 @@ df.drop('index', axis=1, inplace=True)
 # I am going to find the means of these values and assign them for the restaurants.
 
 # In[17]:
-
+df4 = df.copy()
+def unique_restaurants(df = df4):
+    return df4['Name'].unique()
 
 restaurants = list(df['Name'].unique())
 df['Mean Rating'] = 0
@@ -306,15 +317,13 @@ restaurant_names = list(df['Name'].unique())
 
 
 # In[26]:
-
-
 df_rating = df.drop_duplicates(subset='Name')
-df_rating = df_rating.sort_values(by='Mean Rating', ascending=False).head(10)
-
+df_rating = df.sort_values(by='Mean Rating', ascending=False).head(10)
+    
 plt.figure(figsize=(7,5))
 sns.barplot(data=df_rating, x='Mean Rating', y='Name', palette='RdBu')
-plt.title('Top Rated 10 Restaurants');
-
+plt.title('Top Rated 10 Restaurants')
+#st.plotly_chart(plt)
 
 # In[27]:
 
@@ -323,18 +332,21 @@ df_reviews = df.drop_duplicates(subset='Name')
 df_reviews = df_reviews.sort_values(by='Mean Reviews', ascending=False).head(10)
 
 plt.figure(figsize=(7,5))
-sns.barplot(data=df_reviews, x='Mean Reviews', y='Name', palette='RdBu')
+#st.bar_chart(sns.barplot(data=df_reviews, x='Mean Reviews', y='Name', palette='RdBu'))
 plt.title('Top Reviewed 10 Restaurants');
 
 
+
 # In[28]:
+print(df.columns)
+df_top_10 = df
 
-df_followers = df.drop_duplicates(subset='Name')
-df_followers = df_followers.sort_values(by='Mean Followers', ascending=False).head(10)
 
-plt.figure(figsize=(7,5))
-sns.barplot(data=df_followers, x='Mean Followers', y='Name', palette='RdBu')
-plt.title('Most Followed Top 10 Restaurants');
+
+    
+    
+#print(top_10())
+    
 
 
 # ## EDA - Word Frequency Distribution:
@@ -361,6 +373,7 @@ def get_top_words(column, top_nu_of_words, nu_of_word):
 
 
 # Top 20 two word frequencies for Cuisines
+
 list1 = get_top_words(df['Cuisines'], 20, (2,2))
 
 df_words1 = pd.DataFrame(list1, columns=['Word', 'Count'])
@@ -374,6 +387,7 @@ plt.title('Word Couple Frequency for Cuisines');
 
 
 # Top 20 two word frequencies for Reviews
+
 list2 = get_top_words(df['Review'], 20, (2,2))
 
 df_words2 = pd.DataFrame(list2, columns=['Word', 'Count'])
@@ -397,17 +411,20 @@ plt.title('Word Couple Frequency for Reviews');
 
 
 # Changing data set index by restaurant name
-df.set_index('Name', inplace=True)
+df2 = df.copy()
+
+df2.set_index('Name', inplace=True)
 
 # Saving indexes in a series
-indices = pd.Series(df.index)
+indices = pd.Series(df2.index)
 
 # Creating tf-idf matrix
 tfidf = TfidfVectorizer(analyzer='word', ngram_range=(1, 2), min_df=0, stop_words='english')
-tfidf_matrix = tfidf.fit_transform(df['Review'])
+tfidf_matrix = tfidf.fit_transform(df2['Review'])
 
 # Calculating cosine similarities
 cosine_similarities = linear_kernel(tfidf_matrix, tfidf_matrix)
+
 
 
 # ## Creating the Recommender System:
@@ -415,7 +432,7 @@ cosine_similarities = linear_kernel(tfidf_matrix, tfidf_matrix)
 # In[33]:
 
 
-def recommend(name, cosine_similarities = cosine_similarities):
+def recommend(name,N, cosine_similarities = cosine_similarities):
     
     # Create a list to put top 10 restaurants
     recommend_restaurant = []
@@ -431,18 +448,32 @@ def recommend(name, cosine_similarities = cosine_similarities):
     
     # Names of the top 30 restaurants
     for each in top30_indexes:
-        recommend_restaurant.append(list(df.index)[each])
+        recommend_restaurant.append(list(df2.index)[each])
     
     # Creating the new data set to show similar restaurants
-    df_new = pd.DataFrame(columns=['Cuisines', 'Mean Rating', 'Cost', 'Timings'])
+    df_new = pd.DataFrame(columns=['Name','Cuisines', 'Mean Rating', 'Cost', 'Timings', 'Links'])
     
     # Create the top 30 similar restaurants with some of their columns
     for each in recommend_restaurant:
-        df_new = df_new.append(pd.DataFrame(df[['Cuisines','Mean Rating', 'Cost', 'Timings']][df.index == each].sample()))
+        df_new = df_new.append(pd.DataFrame(df2[['Cuisines','Mean Rating', 'Cost', 'Timings','Links']][df2.index == each].sample()))
     
     # Drop the same named restaurants and sort only the top 10 by the highest rating
     df_new = df_new.drop_duplicates(subset=['Cuisines','Mean Rating', 'Cost'], keep=False)
-    df_new = df_new.sort_values(by='Mean Rating', ascending=False).head(10)
+    df_new = df_new.sort_values(by='Mean Rating', ascending=False).head(N)
+    
+    df_new.drop("Name", axis = 1, inplace = True)
+    print("\n\n\n\n\n\n")
+    df_new.index.name = "Name"
+    print(df_new.index.name)
+    print("\n\n\n\n\n")
+    #print("/n/n/n/n/n/n")
+    #print(df.index.name)
+    #print(df.columns)
+   
+    df_new = df_new.reset_index()
+    print(df_new.head())
+    #print("/n/n/n/n/n/n")
+    #df_new.head(10)
     
     #print('TOP %s RESTAURANTS LIKE %s WITH SIMILAR REVIEWS: ' % (str(len(df_new)), name))
     
@@ -491,13 +522,47 @@ def recommend(name, cosine_similarities = cosine_similarities):
 # HERE IS A MEDITERRANEAN / NORT INDIAN / KEBAB / BBQ RESTAURANT. LET'S SEE THE DETAILS ABOUT THIS RESTAURANT:
 #df[df.index == 'Barbeque Nation'].sample(1)
 
+def top_10(df = df_top_10):
+    df_followers = df.drop_duplicates(subset='Name')
+    df_followers = df_followers.sort_values(by='Mean Followers', ascending=False).head(10)
+    
+    fig = px.bar(df_followers, x='Mean Followers', y='Name', color='Name',
+                 color_discrete_sequence=px.colors.diverging.Geyser,
+                 height=600, width=900)
+    fig.update_layout(template="plotly_white",xaxis_showgrid=False,
+                      yaxis_showgrid=False)
+    fig.update_traces( marker_line_color='rgb(8,48,107)',
+                      marker_line_width=2, opacity=0.6)
+    fig.update_layout(showlegend=False, title="Mean Followers",
+                      xaxis_title="Mean Followers",
+                      yaxis_title="Top 10 Followed Restaurants")
+    fig.update_xaxes(showline=True, linewidth=1, linecolor='black')
+    fig.update_yaxes(showline=True, linewidth=1, linecolor='black')
+    return fig
+
+
 
 # In[39]:
 
+def plot(df):
+    
+    fig = px.bar(df, x='Name', y='Mean Rating', color='Name',
+                 color_discrete_sequence=px.colors.diverging.Geyser,
+                 height=600, width=900)
+    fig.update_layout(template="plotly_white",xaxis_showgrid=False,
+                      yaxis_showgrid=False)
+    fig.update_traces( marker_line_color='rgb(8,48,107)',
+                      marker_line_width=2, opacity=0.6)
+    fig.update_layout(showlegend=False, title="Mean Rating",
+                      xaxis_title="Recommended Restaurants",
+                      yaxis_title="Mean Rating")
+    fig.update_xaxes(showline=True, linewidth=1, linecolor='black')
+    fig.update_yaxes(showline=True, linewidth=1, linecolor='black')
+    return fig
 
 # LET'S SEE WHAT ARE WE GOING TO BE RECOMMENDED:
-def displayToFront(usr_inp):
-    df = pd.DataFrame(recommend(usr_inp))
+def displayToFront(usr_inp,n = 10):
+    df = pd.DataFrame(recommend(usr_inp,n))
     return df
     
 #user_input = st.text_input("Enter the Name of Restaurant", 'Barbeque Nation')
