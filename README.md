@@ -6,3 +6,8 @@ This Repository Contains all the code files of Food Recommender system.
 https://docs.google.com/document/d/1lWj_0cRkfa0-pYlDQnHTwEaB7eAqNN8flG9Q07_Weso/edit?usp=sharing
 
 Do Comment Your Views
+
+
+### References 
+
+https://www.kaggle.com/code/akdagmelih/restaurant-recommender-system/notebook
